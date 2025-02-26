@@ -1,0 +1,14 @@
+﻿<Application x:Class="HQExChecker.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:HQExChecker"
+             xmlns:view="clr-namespace:HQExChecker.GUI.MVVM_Main_Components.View"
+             xmlns:viewModel="clr-namespace:HQExChecker.GUI.MVVM_Main_Components.ViewModel">
+    <Application.Resources>
+        <ResourceDictionary>
+            <DataTemplate DataType="{x:Type viewModel:MainViewModel}">
+                <view:MainView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
