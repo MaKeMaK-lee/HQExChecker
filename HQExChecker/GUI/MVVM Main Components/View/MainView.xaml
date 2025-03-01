@@ -80,13 +80,13 @@
                Grid.Row="0"/>
 
         <StackPanel Grid.Row="1">
-            <RadioButton Content="Журнал"
+            <RadioButton Content="Trades"
              Height="50" HorizontalAlignment="Stretch"
              Foreground="WhiteSmoke"
              FontSize="14"
              Style="{StaticResource MenuButtonTheme}"
-             IsChecked="{Binding IsCheckedNavigateToHomeRadio, Mode=OneWay}"
-             Command="{Binding NavigateToHomeCommand}"/>
+             IsChecked="{Binding IsCheckedNavigateToTradesRadio, Mode=OneWay}"
+             Command="{Binding NavigateToTradesCommand}"/>
         </StackPanel>
 
         <ContentControl Grid.Row="1"

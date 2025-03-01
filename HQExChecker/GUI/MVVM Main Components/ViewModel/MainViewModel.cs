@@ -15,7 +15,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
                 OnPropertyChanged();
             }
         }
-        //public bool IsCheckedNavigateToHomeRadio => Navigation?.CurrentView?.GetType() == typeof(HomeViewModel) ? true : false;
+        public bool IsCheckedNavigateToTradesRadio => Navigation?.CurrentView?.GetType() == typeof(TradesViewModel) ? true : false;
 
         public RelayCommand NavigateToHomeCommand { get; set; }
 
@@ -25,11 +25,11 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
 
             Navigation.AddNavigationChangedHandler((o, e) =>
             {
-                //OnPropertyChanged(nameof(IsCheckedNavigateToHomeRadio));
+                OnPropertyChanged(nameof(IsCheckedNavigateToTradesRadio));
 
             });
 
-            //Navigation.NavigateTo<HomeViewModel>();
+            Navigation.NavigateTo<TradesViewModel>();
         }
     }
 }
