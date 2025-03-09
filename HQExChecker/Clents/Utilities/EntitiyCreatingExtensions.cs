@@ -8,7 +8,7 @@ namespace HQExChecker.Clents.Utilities
     public static class EntitiyCreatingExtensions
     {
         private static decimal DecimalFromInt(JsonElement element) => decimal.Parse(element.ToString()!);
-        private static decimal Decimal(JsonElement element) => decimal.Parse(element.ToString()!, CultureInfo.InvariantCulture);
+        private static decimal Decimal(JsonElement element) => decimal.Parse(element.ToString()!, NumberStyles.AllowExponent | NumberStyles.Float, CultureInfo.InvariantCulture);
         private static DateTimeOffset DateTimeOffsetFromInt(JsonElement element) => DateTimeOffset.FromUnixTimeMilliseconds(element.GetInt64());
 
         public static Ticker CreateTicker(this JsonElement innerArray)
