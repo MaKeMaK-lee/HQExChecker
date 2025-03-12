@@ -17,7 +17,9 @@ namespace HQExChecker.Clents
         const string _publicWssConnectionUrl = "wss://api-pub.bitfinex.com/ws/2";
 
         const string _subscribeEventName = "subscribe";
+        const string _unsubscribeEventName = "unsubscribe";
         const string _subscribedEventName = "subscribed";
+        const string _unsubscribedEventName = "unsubscribed";
 
         const string _tradesChannelName = "trades";
 
@@ -31,27 +33,38 @@ namespace HQExChecker.Clents
         #endregion
 
         private bool disposed = false;
+
         private CancellationTokenSource? resubscribeAsyncCancellationTokenSource;
+
+        /// <summary>
+        /// Задача для выполнения метода ResubscribingTaskActionAsync
+        /// </summary>
         private Task resubscribingTask;
 
         private readonly WebsocketClient _wsclient;
 
-        private LimitedChannelsDictionary _tradeChannelsCollection;
-
-        public Action<Trade> NewTradeAction;
+        private readonly LimitedChannelsDictionary _tradeChannelsCollection;
 
         /// <summary>
         /// Запросы на подключение к каналам (key: channelSymbol, value: maxCount)
         /// </summary>
-        private Dictionary<string, int> _tradeChannelRequests;
+        private readonly Dictionary<string, int> _tradeChannelsSubRequests;
+
+        /// <summary>
+        /// Запросы на отключение от каналов (string symbol)
+        /// </summary>
+        private readonly List<string> _tradeChannelsUnsubRequests;
+
+        private Action<Trade> newTradeAction;
 
         public BitfinexWebsocketClient(Action<Trade> newTradeAction)
         {
-            NewTradeAction = newTradeAction;
+            this.newTradeAction = newTradeAction;
 
             resubscribingTask = new Task(ResubscribingTaskActionAsync);
 
-            _tradeChannelRequests = new Dictionary<string, int>();
+            _tradeChannelsSubRequests = [];
+            _tradeChannelsUnsubRequests = [];
             _tradeChannelsCollection = new(_maxPublicChannalConnectionsPerTime);
 
 
@@ -72,8 +85,22 @@ namespace HQExChecker.Clents
 
         public void SubscribeTrades(string symbol, int maxRecentCount)
         {
-            _tradeChannelRequests.Add(symbol, maxRecentCount);
+            _tradeChannelsSubRequests.Add(symbol, maxRecentCount);
             SendSubscribeTradesRequest(symbol);
+        }
+
+        public void UnsubscribeTrades(string symbol)
+        {
+            _tradeChannelsSubRequests.Remove(symbol);
+
+            var channel = _tradeChannelsCollection.Channels
+               .FirstOrDefault(t => t.Value.symbol == symbol);
+
+            if (channel.Key != 0)
+            {
+                _tradeChannelsUnsubRequests.Add(symbol);
+                SendUnsubscribeRequest(channel.Key);
+            }
         }
 
         private void SendSubscribeTradesRequest(string symbol)
@@ -87,21 +114,43 @@ namespace HQExChecker.Clents
             SendMessage(jsonObject);
         }
 
-        private void OnReconnection(ReconnectionInfo info)
+        private void SendUnsubscribeRequest(int id)
         {
-            resubscribingTask.Start();
+            var jsonObject = new UnsubscribeObjectRequest()
+            {
+                eventName = _unsubscribeEventName,
+                chanId = id
+            };
+            SendMessage(jsonObject);
         }
 
-        private async void ResubscribingTaskActionAsync()
+        private void OnReconnection(ReconnectionInfo info)
         {
             if (resubscribingTask.Status != TaskStatus.Created)
             {
                 resubscribeAsyncCancellationTokenSource?.Cancel();
                 resubscribingTask.Wait();
             }
+            resubscribingTask.Start();
+        }
+
+        /// <summary>
+        /// Действие выполнения ресаба на каналы.
+        /// </summary>
+        private async void ResubscribingTaskActionAsync()
+        {
+            IEnumerable<(string symbol, int maxCount)> channels = _tradeChannelsCollection.Channels
+                .Select(channel => (channel.Value.symbol, channel.Value.maxCount))
+                .Concat(_tradeChannelsSubRequests
+                .Select(request => (request.Key, request.Value)))
+                .Where(ch => !_tradeChannelsUnsubRequests.Any(unsR => unsR == ch.Item1)).ToList();
+
+            _tradeChannelsUnsubRequests.Clear();
+            _tradeChannelsSubRequests.Clear();
+            _tradeChannelsCollection.Clear();
 
             resubscribeAsyncCancellationTokenSource = new CancellationTokenSource();
-            await ResubscribeAsync(resubscribeAsyncCancellationTokenSource.Token);
+            await ResubscribeAsync(channels, resubscribeAsyncCancellationTokenSource.Token);
 
             resubscribingTask = new Task(ResubscribingTaskActionAsync);
         }
@@ -109,15 +158,9 @@ namespace HQExChecker.Clents
         /// <summary>
         /// Внимание! Не тестировалось при количестве каналов большем, чем минутное ограничение у api.
         /// </summary>
-        /// <returns></returns>
-        private async Task ResubscribeAsync(CancellationToken token)
+        private async Task ResubscribeAsync(IEnumerable<(string symbol, int maxCount)> channels, CancellationToken token)
         {
-            IEnumerable<(string symbol, int maxCount)> targets = _tradeChannelsCollection.Channels
-                .Select(channel => (channel.Value.symbol, channel.Value.maxCount))
-                .Concat(_tradeChannelRequests
-                .Select(request => (request.Key, request.Value)));
-
-            var chunks = targets.Chunk(_maxPublicChannalConnectionsPerMinute);
+            var chunks = channels.Chunk(_maxPublicChannalConnectionsPerMinute);
             foreach (var requestsChunk in chunks)
             {
                 if (token.IsCancellationRequested)
@@ -149,25 +192,31 @@ namespace HQExChecker.Clents
 
                 //Если это канал трейдов
                 var channelId = array[0].GetInt32();
-                var channelSymbol = _tradeChannelsCollection.Channels[channelId].symbol;
                 if (_tradeChannelsCollection.Channels.ContainsKey(channelId))
                 {
+                    var channelSymbol = _tradeChannelsCollection.Channels[channelId].symbol;
+                    var channelMaxCount = _tradeChannelsCollection.Channels[channelId].maxCount;
+
                     //Если это строка
                     if (array[1].ValueKind == JsonValueKind.String)
                     {
                         //Если новый трейд
                         if (array[1].ToString() == _tradeMessageTypeExecutedString)
                         {
-                            NewTradeAction(array[2].CreatePairTrade(channelSymbol));
+                            newTradeAction(array[2].CreatePairTrade(channelSymbol));
                         }
                     }
                     //Если это снапшот недавних трейдов
                     if (array[1].ValueKind == JsonValueKind.Array)
                     {
-                        var snapshotArray = array[1].EnumerateArray();
-                        foreach (var jsonElement in snapshotArray)
+                        var snapshotArray = array[1]
+                            .EnumerateArray()
+                            .Select(t => t.CreatePairTrade(channelSymbol))
+                            .Take(channelMaxCount)
+                            .OrderBy(t => t.Time);
+                        foreach (var item in snapshotArray)
                         {
-                            NewTradeAction(jsonElement.CreatePairTrade(channelSymbol));
+                            newTradeAction(item);
                         }
                     }
 
@@ -182,12 +231,16 @@ namespace HQExChecker.Clents
                 //Если это сообщение об успешной подписке на канал
                 if (jsonObject.GetStringValueOf(_eventPropertyNameString) == _subscribedEventName)
                 {
-                    var channel = jsonObject.GetStringValueOf(_channelPropertyNameString);
-
-                    if (channel == _tradesChannelName)
+                    var channelName = jsonObject.GetStringValueOf(_channelPropertyNameString);
+                    if (channelName == _tradesChannelName)
                     {
                         HandleSubscribedTradeChannelJsonEvent(jsonObject);
                     }
+                }
+                //Если это сообщение об успешной отписке от канала
+                if (jsonObject.GetStringValueOf(_eventPropertyNameString) == _unsubscribedEventName)
+                {
+                    HandleUnsubscribedChannelJsonEvent(jsonObject);
                 }
             }
 
@@ -196,12 +249,23 @@ namespace HQExChecker.Clents
             return;
         }
 
-
+        private void HandleUnsubscribedChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
+        {
+            var chanid = jsonObject.GetIntValueOf(_channelIdPropertyNameString);
+            if (_tradeChannelsCollection.Channels.ContainsKey(chanid))
+            {
+                var channel = _tradeChannelsCollection.Channels[chanid];
+                _tradeChannelsSubRequests.Remove(channel.symbol);
+            }
+            _tradeChannelsCollection.Remove(chanid);
+        }
 
         private void HandleSubscribedTradeChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
         {
             var symbol = jsonObject.GetStringValueOf(_channelSymbolPropertyNameString);
-            var maxCount = _tradeChannelRequests[symbol];
+            if (!_tradeChannelsSubRequests.ContainsKey(symbol))
+                return;
+            var maxCount = _tradeChannelsSubRequests[symbol];
 
             _tradeChannelsCollection.Add(
                 jsonObject.GetIntValueOf(_channelIdPropertyNameString),
@@ -209,7 +273,7 @@ namespace HQExChecker.Clents
                 symbol,
                 maxCount);
 
-            _tradeChannelRequests.Remove(symbol);
+            _tradeChannelsSubRequests.Remove(symbol);
         }
 
         private void SendMessage(object message)
