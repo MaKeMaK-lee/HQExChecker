@@ -5,7 +5,7 @@
         private readonly Dictionary<int, (string channel, string symbol, int maxCount)> channels = [];
 
         /// <summary>
-        /// int id, (channel - "trades" etc, symbol - "tBTCUSD" etc, maxCount - max count on snapshot)
+        /// int id, (channel - "trades" etc, symbol - "tBTCUSD" etc, maxCount - max count on snapshot / timeframe on minutes for candle)
         /// </summary>
         public IReadOnlyDictionary<int, (string channel, string symbol, int maxCount)> Channels => channels.AsReadOnly();
 
