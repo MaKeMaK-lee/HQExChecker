@@ -43,7 +43,7 @@ namespace HQExChecker.Clents
 
         private readonly WebsocketClient _wsclient;
 
-        private readonly LimitedChannelsDictionary _tradeChannelsCollection;
+        private readonly LimitedChannelsDictionary _channelsCollection;
 
         /// <summary>
         /// Запросы на подключение к каналам (key: channelSymbol, value: maxCount)
@@ -65,7 +65,7 @@ namespace HQExChecker.Clents
 
             _tradeChannelsSubRequests = [];
             _tradeChannelsUnsubRequests = [];
-            _tradeChannelsCollection = new(_maxPublicChannalConnectionsPerTime);
+            _channelsCollection = new(_maxPublicChannalConnectionsPerTime);
 
 
             _wsclient = CreateWSClient();
@@ -93,7 +93,7 @@ namespace HQExChecker.Clents
         {
             _tradeChannelsSubRequests.Remove(symbol);
 
-            var channel = _tradeChannelsCollection.Channels
+            var channel = _channelsCollection.Channels
                .FirstOrDefault(t => t.Value.symbol == symbol);
 
             if (channel.Key != 0)
@@ -139,7 +139,7 @@ namespace HQExChecker.Clents
         /// </summary>
         private async void ResubscribingTaskActionAsync()
         {
-            IEnumerable<(string symbol, int maxCount)> channels = _tradeChannelsCollection.Channels
+            IEnumerable<(string symbol, int maxCount)> channels = _channelsCollection.Channels
                 .Select(channel => (channel.Value.symbol, channel.Value.maxCount))
                 .Concat(_tradeChannelsSubRequests
                 .Select(request => (request.Key, request.Value)))
@@ -147,7 +147,7 @@ namespace HQExChecker.Clents
 
             _tradeChannelsUnsubRequests.Clear();
             _tradeChannelsSubRequests.Clear();
-            _tradeChannelsCollection.Clear();
+            _channelsCollection.Clear();
 
             resubscribeAsyncCancellationTokenSource = new CancellationTokenSource();
             await ResubscribeAsync(channels, resubscribeAsyncCancellationTokenSource.Token);
@@ -192,10 +192,10 @@ namespace HQExChecker.Clents
 
                 //Если это канал трейдов
                 var channelId = array[0].GetInt32();
-                if (_tradeChannelsCollection.Channels.ContainsKey(channelId))
+                if (_channelsCollection.Channels.ContainsKey(channelId))
                 {
-                    var channelSymbol = _tradeChannelsCollection.Channels[channelId].symbol;
-                    var channelMaxCount = _tradeChannelsCollection.Channels[channelId].maxCount;
+                    var channelSymbol = _channelsCollection.Channels[channelId].symbol;
+                    var channelMaxCount = _channelsCollection.Channels[channelId].maxCount;
 
                     //Если это строка
                     if (array[1].ValueKind == JsonValueKind.String)
@@ -252,12 +252,12 @@ namespace HQExChecker.Clents
         private void HandleUnsubscribedChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
         {
             var chanid = jsonObject.GetIntValueOf(_channelIdPropertyNameString);
-            if (_tradeChannelsCollection.Channels.ContainsKey(chanid))
+            if (_channelsCollection.Channels.ContainsKey(chanid))
             {
-                var channel = _tradeChannelsCollection.Channels[chanid];
+                var channel = _channelsCollection.Channels[chanid];
                 _tradeChannelsSubRequests.Remove(channel.symbol);
             }
-            _tradeChannelsCollection.Remove(chanid);
+            _channelsCollection.Remove(chanid);
         }
 
         private void HandleSubscribedTradeChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
@@ -267,7 +267,7 @@ namespace HQExChecker.Clents
                 return;
             var maxCount = _tradeChannelsSubRequests[symbol];
 
-            _tradeChannelsCollection.Add(
+            _channelsCollection.Add(
                 jsonObject.GetIntValueOf(_channelIdPropertyNameString),
                 jsonObject.GetStringValueOf(_channelPropertyNameString),
                 symbol,
