@@ -1,107 +1,42 @@
 ﻿using HQExChecker.Clents.Utilities;
 using HQExChecker.Clents.Utilities.Entities;
+using HQExChecker.Entities.WebsocketChannels;
 using HQTestLib.Entities;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Websocket.Client;
 
 namespace HQExChecker.Clents
 {
     public class BitfinexWebsocketClient : IDisposable
     {
-        #region ApiDocs
-        //Сведения получены от поставщика API https://docs.bitfinex.com/ для APIv2 в марте 2025 года.
-
-        const int _maxPublicChannalConnectionsPerMinute = 20;
-        const int _maxPublicChannalConnectionsPerTime = 25;
-        const string _publicWssConnectionUrl = "wss://api-pub.bitfinex.com/ws/2";
-
-        const string _subscribeEventName = "subscribe";
-        const string _unsubscribeEventName = "unsubscribe";
-        const string _subscribedEventName = "subscribed";
-        const string _unsubscribedEventName = "unsubscribed";
-
-        const string _tradesChannelName = "trades";
-        const string _candlesChannelName = "candles";
-
-        const string _eventPropertyNameString = "event";
-        const string _channelPropertyNameString = "channel";
-        const string _channelIdPropertyNameString = "chanId";
-        const string _channelSymbolPropertyNameString = "symbol";
-        const string _channelKeyPropertyNameString = "key";
-
-        const string _candlesSubscriptionKeyTemplateString = "trade:{timeframe}{timeframeMultiplier}:{symbol}";
-        const string _candlesSubscriptionKeyTemplateTimeframePropertyString = "{timeframe}";
-        const string _candlesSubscriptionKeyTemplateTimeframeMultiplierPropertyString = "{timeframeMultiplier}";
-        const string _candlesSubscriptionKeyTemplateSymbolPropertyString = "{symbol}";
-        const string _candlesSubscriptionKeyTimeframeMinuteString = "m";
-
-        const string _tradeMessageTypeUpdateString = "tu";
-        const string _tradeMessageTypeExecutedString = "te";
-        #endregion
-
         private bool disposed = false;
-
-        private CancellationTokenSource? resubscribeAsyncCancellationTokenSource;
-
-        /// <summary>
-        /// Задача для выполнения метода ResubscribingTaskActionAsync
-        /// </summary>
-        private Task resubscribingTask;
 
         private readonly WebsocketClient _wsclient;
 
-        /// <summary>
-        /// Подключенные каналы 
-        /// </summary>
-        private readonly LimitedChannelsDictionary _channelsCollection;
+        public event Action<Trade>? NewTradeAction;
 
-        /// <summary>
-        /// Запросы на подключение к каналам трейдов (key: channelSymbol, value: maxCount)
-        /// </summary>
-        private readonly Dictionary<string, int> _tradeChannelsSubRequests;
+        public event Action<Candle>? CandleProcessingAction;
 
-        /// <summary>
-        /// Запросы на отключение от каналов трейдов (string symbol)
-        /// </summary>
-        private readonly List<string> _tradeChannelsUnsubRequests;
+        public event Action<int>? ConnectionClosed;
 
-        /// <summary>
-        /// Запросы на подключение к каналам свеч (key: channelSymbol)
-        /// </summary>
-        private readonly Dictionary<string, int> _candleChannelsSubRequests;
+        public event Action<int>? HandleUnsubscribedChannel;
 
-        /// <summary>
-        /// Запросы на отключение от каналов свеч (string symbol)
-        /// </summary>
-        private readonly List<string> _candleChannelsUnsubRequests;
+        public event Action<string, int>? HandleSubscribedTradeChannel;
 
-        private Action<Trade> newTradeAction;
+        public event Action<string, int, int>? HandleSubscribedCandleChannel;
 
-        private Action<Candle> newCandleAction;
+        public required Func<IReadOnlyDictionary<int, PairChannelOptions>> GetActiveChannelsConnetcions { get; set; }
 
-        public BitfinexWebsocketClient(Action<Trade> newTradeAction, Action<Candle> newCandleAction)
+        public BitfinexWebsocketClient()
         {
-            this.newTradeAction = newTradeAction;
-            this.newCandleAction = newCandleAction;
-
-            resubscribingTask = new Task(ResubscribingTaskActionAsync);
-
-            _tradeChannelsSubRequests = [];
-            _tradeChannelsUnsubRequests = [];
-            _candleChannelsSubRequests = [];
-            _candleChannelsUnsubRequests = [];
-            _channelsCollection = new(_maxPublicChannalConnectionsPerTime);
-
-
             _wsclient = CreateWSClient();
             _wsclient.StartOrFail();
         }
 
         private WebsocketClient CreateWSClient()
         {
-            var wsClient = new WebsocketClient(new Uri(_publicWssConnectionUrl))
+            var wsClient = new WebsocketClient(new Uri(BitfinexApi._publicWssConnectionUrl))
             {
                 ReconnectTimeout = TimeSpan.FromSeconds(30)
             };
@@ -110,73 +45,49 @@ namespace HQExChecker.Clents
             return wsClient;
         }
 
-        public void SubscribeTrades(string symbol, int maxRecentCount)
+        public void SubscribeTrades(string symbol)
         {
-            _tradeChannelsSubRequests.Add(symbol, maxRecentCount);
             SendSubscribeTradesRequest(symbol);
         }
 
-        public void UnsubscribeTrades(string symbol)
+        public void UnsubscribeTrades(int channelId)
         {
-            _tradeChannelsSubRequests.Remove(symbol);
-
-            var channel = _channelsCollection.Channels
-                .Where(ch => ch.Value.channel == _tradesChannelName)
-                .FirstOrDefault(t => t.Value.symbol == symbol);
-
-            if (channel.Key != 0)
-            {
-                _tradeChannelsUnsubRequests.Add(symbol);
-                SendUnsubscribeRequest(channel.Key);
-            }
+            SendUnsubscribeRequest(channelId);
         }
 
-        /// <param name="minutes">
-        /// Minutes only from this list:
-        /// 1m: one minute,
-        /// 5m : five minutes,
-        /// 15m : 15 minutes,
-        /// 30m : 30 minutes,
-        /// 1h : one hour,
-        /// 3h : 3 hours,
-        /// 6h : 6 hours,
-        /// 12h : 12 hours,
-        /// 1D : one day,
-        /// 1W : one week,
-        /// 14D : two weeks,
-        /// 1M : one month,
+        /// <param name="timeFrameInSeconds">Значение будет округлено вверх до ближайшего из доступных в api:
+        /// <br />1m 
+        /// <br />5m 
+        /// <br />15m 
+        /// <br />30m 
+        /// <br />1h 
+        /// <br />3h 
+        /// <br />6h 
+        /// <br />12h 
+        /// <br />1D 
+        /// <br />1W 
+        /// <br />14D 
+        /// <br />1M 
         /// </param>
-        public void SubscribeCandles(string symbol, int minutes)
+        public void SubscribeCandles(string symbol, int timeFrameInSeconds)
         {
-            _candleChannelsSubRequests.Add(symbol, minutes);
-            SendSubscribeCandlesRequest(symbol, minutes);
+            var key = BitfinexApi.GetAcceptedKey(symbol, timeFrameInSeconds);
+            SendSubscribeCandlesRequest(key);
         }
 
-        public void UnsubscribeCandles(string symbol)
+
+        public void UnsubscribeCandles(int channelId)
         {
-            _candleChannelsSubRequests.Remove(symbol);
-
-            var channel = _channelsCollection.Channels
-                .Where(ch => ch.Value.channel == _candlesChannelName)
-               .FirstOrDefault(t => t.Value.symbol == symbol);
-
-            if (channel.Key != 0)
-            {
-                _candleChannelsUnsubRequests.Add(symbol);
-                SendUnsubscribeRequest(channel.Key);
-            }
+            SendUnsubscribeRequest(channelId);
         }
 
-        private void SendSubscribeCandlesRequest(string symbol, int minutes)
+        private void SendSubscribeCandlesRequest(string key)
         {
             var jsonObject = new SubscribeCandlesObjectRequest()
             {
-                eventName = _subscribeEventName,
-                channel = _candlesChannelName,
-                key = _candlesSubscriptionKeyTemplateString
-                .Replace(_candlesSubscriptionKeyTemplateTimeframePropertyString, minutes.ToString())
-                .Replace(_candlesSubscriptionKeyTemplateTimeframeMultiplierPropertyString, _candlesSubscriptionKeyTimeframeMinuteString)
-                .Replace(_candlesSubscriptionKeyTemplateSymbolPropertyString, symbol)
+                eventName = BitfinexApi._subscribeEventName,
+                channel = BitfinexApi._candlesChannelName,
+                key = key
             };
             SendMessage(jsonObject);
         }
@@ -185,8 +96,8 @@ namespace HQExChecker.Clents
         {
             var jsonObject = new SubscribeTradesObjectRequest()
             {
-                eventName = _subscribeEventName,
-                channel = _tradesChannelName,
+                eventName = BitfinexApi._subscribeEventName,
+                channel = BitfinexApi._tradesChannelName,
                 symbol = symbol
             };
             SendMessage(jsonObject);
@@ -196,7 +107,7 @@ namespace HQExChecker.Clents
         {
             var jsonObject = new UnsubscribeObjectRequest()
             {
-                eventName = _unsubscribeEventName,
+                eventName = BitfinexApi._unsubscribeEventName,
                 chanId = id
             };
             SendMessage(jsonObject);
@@ -204,86 +115,15 @@ namespace HQExChecker.Clents
 
         private void OnReconnection(ReconnectionInfo info)
         {
-            if (resubscribingTask.Status != TaskStatus.Created)
-            {
-                resubscribeAsyncCancellationTokenSource?.Cancel();
-                resubscribingTask.Wait();
-            }
-            resubscribingTask.Start();
-        }
-
-        /// <summary>
-        /// Действие выполнения ресаба на каналы.
-        /// </summary>
-        private async void ResubscribingTaskActionAsync()
-        {
-            IEnumerable<(string symbol, int maxCount)> tradeChannels = _channelsCollection.Channels
-                .Where(ch => ch.Value.channel == _tradesChannelName)
-                .Select(channel => (channel.Value.symbol, channel.Value.maxCount))
-                .Concat(_tradeChannelsSubRequests
-                .Select(request => (request.Key, request.Value)))
-                .Where(ch => !_tradeChannelsUnsubRequests.Any(unsR => unsR == ch.Item1)).ToList();
-            _tradeChannelsUnsubRequests.Clear();
-            _tradeChannelsSubRequests.Clear();
-
-            IEnumerable<(string symbol, int maxCount)> candlesChannels = _channelsCollection.Channels
-                .Where(ch => ch.Value.channel == _candlesChannelName)
-                .Select(channel => (channel.Value.symbol, channel.Value.maxCount))
-                .Concat(_candleChannelsSubRequests
-                .Select(request => (request.Key, request.Value)))
-                .Where(ch => !_candleChannelsUnsubRequests.Any(unsR => unsR == ch.Item1)).ToList();
-            _candleChannelsUnsubRequests.Clear();
-            _candleChannelsSubRequests.Clear();
-
-            _channelsCollection.Clear();
-
-            resubscribeAsyncCancellationTokenSource = new CancellationTokenSource();
-            await ResubscribeAsync(tradeChannels, candlesChannels, resubscribeAsyncCancellationTokenSource.Token);
-
-            resubscribingTask = new Task(ResubscribingTaskActionAsync);
-        }
-
-        /// <summary>
-        /// Внимание! Не тестировалось при количестве каналов большем, чем минутное ограничение у api.
-        /// </summary>
-        private async Task ResubscribeAsync(
-            IEnumerable<(string symbol, int maxCount)> tradeChannels,
-            IEnumerable<(string symbol, int maxCount)> candlesChannels,
-            CancellationToken token)
-        {
-            IEnumerable<((string symbol, int maxCount) channel, int channelType)> channels =
-                tradeChannels.Select(ch => (ch, 1))
-                .Concat(candlesChannels.Select(ch => (ch, 2)));
-
-            var chunks = channels.Chunk(_maxPublicChannalConnectionsPerMinute);
-            foreach (var requestsChunk in chunks)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-                foreach (var request in requestsChunk)
-                {
-                    if (request.channelType == 1)
-                    {
-                        SubscribeTrades(request.channel.symbol, request.channel.maxCount);
-                    }
-                    if (request.channelType == 2)
-                    {
-                        SubscribeCandles(request.channel.symbol, request.channel.maxCount);
-                    }
-                }
-                if (requestsChunk == chunks.Last())
-                {
-                    await Task.Delay(61 * 1000, token);
-                }
-            }
+            ConnectionClosed?.Invoke(BitfinexApi._maxPublicChannalConnectionsPerTime);
         }
 
         private void HandleMessage(ResponseMessage message)
         {
             if (message.MessageType != WebSocketMessageType.Text)
                 return;
+
+            var activeChannels = GetActiveChannelsConnetcions();
 
             var rootElement = JsonSerializer.Deserialize<JsonElement>(message.Text!)!;
 
@@ -294,22 +134,18 @@ namespace HQExChecker.Clents
 
                 //Если это сообщение по подписке на канал
                 var channelId = array[0].GetInt32();
-                if (_channelsCollection.Channels.ContainsKey(channelId))
+                if (activeChannels.TryGetValue(channelId, out PairChannelOptions? channel))
                 {
-                    var channelSymbol = _channelsCollection.Channels[channelId].symbol;
-
                     //Если это канал трейдов
-                    if (_channelsCollection.Channels[channelId].channel == _tradesChannelName)
+                    if (channel is TradeChannelOptions tradesChannel)
                     {
-                        var channelMaxCount = _channelsCollection.Channels[channelId].maxCount;
-
                         //Если это строка
                         if (array[1].ValueKind == JsonValueKind.String)
                         {
                             //Если новый трейд
-                            if (array[1].ToString() == _tradeMessageTypeExecutedString)
+                            if (array[1].ToString() == BitfinexApi._tradeMessageTypeExecutedString)
                             {
-                                newTradeAction(array[2].CreatePairTrade(channelSymbol));
+                                NewTradeAction?.Invoke(array[2].CreatePairTrade(tradesChannel.Pair));
                             }
                         }
                         //Если это снапшот недавних трейдов
@@ -317,18 +153,18 @@ namespace HQExChecker.Clents
                         {
                             var snapshotArray = array[1]
                                 .EnumerateArray()
-                                .Select(t => t.CreatePairTrade(channelSymbol))
-                                .Take(channelMaxCount)
+                                .Select(t => t.CreatePairTrade(tradesChannel.Pair))
+                                .Take(tradesChannel.MaxCount)
                                 .OrderBy(t => t.Time);
                             foreach (var item in snapshotArray)
                             {
-                                newTradeAction(item);
+                                NewTradeAction?.Invoke(item);
                             }
                         }
                     }
 
                     //Если это канал свеч
-                    if (_channelsCollection.Channels[channelId].channel == _candlesChannelName)
+                    if (channel is CandleChannelOptions candlesChannel)
                     {
                         //Если это массив (исключаем heartbeat)
                         if (array[1].ValueKind == JsonValueKind.Array && array[1].GetArrayLength() > 0)
@@ -336,17 +172,23 @@ namespace HQExChecker.Clents
                             //Если это новая свеча 
                             if (array[1][0].ValueKind == JsonValueKind.Number)
                             {
-                                newCandleAction(array[1].CreatePairCandle(channelSymbol));
+                                CandleProcessingAction?.Invoke(array[1].CreatePairCandle(candlesChannel.Pair));
                             }
                             //Если это снапшот 
                             if (array[1][0].ValueKind == JsonValueKind.Array)
                             {
                                 var snapshotArray = array[1]
                                     .EnumerateArray()
-                                    .Select(t => t.CreatePairCandle(channelSymbol));
+                                    .Select(t => t.CreatePairCandle(candlesChannel.Pair));
+
+                                int maxCount = (int)(candlesChannel.Count ?? 0);
+                                if (maxCount > 0)
+                                    snapshotArray = snapshotArray.Take(maxCount);
+                                snapshotArray = snapshotArray.OrderBy(t => t.OpenTime);
+
                                 foreach (var item in snapshotArray)
                                 {
-                                    newCandleAction(item);
+                                    CandleProcessingAction?.Invoke(item);
                                 }
                             }
                         }
@@ -360,21 +202,20 @@ namespace HQExChecker.Clents
                 var jsonObject = rootElement.EnumerateObject().ToArray();
 
                 //Если это сообщение об успешной подписке на канал
-                if (jsonObject.GetStringValueOf(_eventPropertyNameString) == _subscribedEventName)
+                if (jsonObject.GetStringValueOf(BitfinexApi._eventPropertyNameString) == BitfinexApi._subscribedEventName)
                 {
-                    var channelName = jsonObject.GetStringValueOf(_channelPropertyNameString);
-                    if (channelName == _tradesChannelName || channelName == _candlesChannelName)
+                    var channelName = jsonObject.GetStringValueOf(BitfinexApi._channelPropertyNameString);
+                    if (channelName == BitfinexApi._tradesChannelName || channelName == BitfinexApi._candlesChannelName)
                     {
                         HandleSubscribedChannelJsonEvent(jsonObject);
                     }
                 }
                 //Если это сообщение об успешной отписке от канала
-                if (jsonObject.GetStringValueOf(_eventPropertyNameString) == _unsubscribedEventName)
+                if (jsonObject.GetStringValueOf(BitfinexApi._eventPropertyNameString) == BitfinexApi._unsubscribedEventName)
                 {
                     HandleUnsubscribedChannelJsonEvent(jsonObject);
                 }
             }
-
 
             var test = message.Text;
             return;
@@ -382,64 +223,34 @@ namespace HQExChecker.Clents
 
         private void HandleUnsubscribedChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
         {
-            var chanid = jsonObject.GetIntValueOf(_channelIdPropertyNameString);
-            if (_channelsCollection.Channels.ContainsKey(chanid))
-            {
-                var channel = _channelsCollection.Channels[chanid];
-                _tradeChannelsSubRequests.Remove(channel.symbol);
-            }
-            _channelsCollection.Remove(chanid);
+            var chanid = jsonObject.GetIntValueOf(BitfinexApi._channelIdPropertyNameString);
+            HandleUnsubscribedChannel?.Invoke(chanid);
         }
 
         private void HandleSubscribedChannelJsonEvent(IEnumerable<JsonProperty> jsonObject)
         {
-            var channel = jsonObject.GetStringValueOf(_channelPropertyNameString);
+            var channel = jsonObject.GetStringValueOf(BitfinexApi._channelPropertyNameString);
 
-            int m = 0;//maxCount / minutes
-            if (channel == _tradesChannelName)
+            if (channel == BitfinexApi._tradesChannelName)
             {
-                var symbol = jsonObject.GetStringValueOf(_channelSymbolPropertyNameString);
-                if (!_tradeChannelsSubRequests.TryGetValue(symbol, out int value))
-                    return;
-                m = value;
-
-                _channelsCollection.Add(
-                    jsonObject.GetIntValueOf(_channelIdPropertyNameString),
-                    channel,
-                    symbol,
-                    m);
-                _tradeChannelsSubRequests.Remove(symbol);
+                var id = jsonObject.GetIntValueOf(BitfinexApi._channelIdPropertyNameString);
+                var symbol = jsonObject.GetStringValueOf(BitfinexApi._channelSymbolPropertyNameString);
+                HandleSubscribedTradeChannel?.Invoke(symbol, id);
             }
-            if (channel == _candlesChannelName)
+            if (channel == BitfinexApi._candlesChannelName)
             {
-                var key = jsonObject.GetStringValueOf(_channelKeyPropertyNameString);
-                var symbol = GetChannelSymbol(key);
-                if (!_candleChannelsSubRequests.TryGetValue(symbol, out int value))
-                    return;
-
-                m = value;
-                _channelsCollection.Add(
-                    jsonObject.GetIntValueOf(_channelIdPropertyNameString),
-                    channel,
-                    symbol,
-                    m);
-                _candleChannelsSubRequests.Remove(symbol);
+                var id = jsonObject.GetIntValueOf(BitfinexApi._channelIdPropertyNameString);
+                var key = jsonObject.GetStringValueOf(BitfinexApi._channelKeyPropertyNameString);
+                var symbol = BitfinexApi.GetChannelSymbol(key);
+                var acceptedTimeFrame = BitfinexApi.GetTimeframeFromCandleKey(key);
+                HandleSubscribedCandleChannel?.Invoke(symbol, id, acceptedTimeFrame);
             }
         }
-
-        private string GetChannelSymbol(string key) => ExtractSymbol(key,
-            _candlesSubscriptionKeyTemplateString,
-            _candlesSubscriptionKeyTemplateSymbolPropertyString);
 
         private void SendMessage(object message)
         {
             var text = JsonSerializer.Serialize(message);
             _wsclient.Send(text);
-        }
-
-        private void SendMessage(string message)
-        {
-            _wsclient.Send(message);
         }
 
         public void Dispose()
@@ -451,46 +262,6 @@ namespace HQExChecker.Clents
 
             GC.SuppressFinalize(this);
             disposed = true;
-        }
-
-        public static string ExtractSymbol(string source, string template, string target)
-        {
-            // Извлекаем имя целевой группы (например, "symbol" из "{symbol}")
-            string groupName = target.Trim('{', '}');
-
-            // Экранируем фигурные скобки в шаблоне для корректного разбиения
-            string pattern = @"(\{[\w]+\})";
-            string[] parts = Regex.Split(template, pattern);
-
-            // Собираем regex-паттерн
-            string regexPattern = "^";
-            foreach (var part in parts)
-            {
-                if (string.IsNullOrEmpty(part))
-                    continue;
-
-                // Если часть — плейсхолдер (например, "{timeframe}")
-                if (Regex.IsMatch(part, @"^\{\w+\}$"))
-                {
-                    string placeholder = part.Trim('{', '}');
-                    // Если это целевой плейсхолдер — создаём именованную группу
-                    regexPattern += (placeholder == groupName)
-                        ? $"(?<{groupName}>.*?)"
-                        : ".*?";
-                }
-                else // Если статичный текст — экранируем
-                {
-                    regexPattern += Regex.Escape(part);
-                }
-            }
-            regexPattern += "$";
-
-            // Проверяем совпадение и извлекаем значение
-            Match match = Regex.Match(source, regexPattern);
-            if (!match.Success)
-                throw new ArgumentException("Строка не соответствует шаблону.");
-
-            return match.Groups[groupName].Value;
         }
     }
 }

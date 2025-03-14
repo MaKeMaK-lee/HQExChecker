@@ -2,7 +2,7 @@
 
 namespace HQTestLib.Connectors
 {
-    interface ITestConnector
+    public interface ITestConnector
     {
         #region Rest
 
@@ -12,7 +12,7 @@ namespace HQTestLib.Connectors
         #endregion
 
         #region Socket
-
+        
 
         event Action<Trade> NewBuyTrade;
         event Action<Trade> NewSellTrade;

@@ -7,7 +7,6 @@ using System.Text.Json;
 
 namespace HQExChecker.Clents
 {
-
     public class BitfinexRestClient
     {
         private void SetSelectionQueryParams(IFlurlRequest request, int? limit = null, int? sort = null, long? start = null, long? end = null)
@@ -24,19 +23,22 @@ namespace HQExChecker.Clents
 
         /// <summary>
         /// The Candles endpoint provides OCHL (Open, Close, High, Low) and volume data for the specified funding currency or trading pair.
-        /// The endpoint provides the last 100 candles by default, but a limit and a start and/or end timestamp can be specified.
-        /// Rate Limit:	30 reqs/min
+        /// <br/>The endpoint provides the last 100 candles by default, but a limit and a start and/or end timestamp can be specified.
+        /// <br/>Rate Limit:	30 reqs/min
         /// </summary>
         /// <param name="pair">Trading pair</param>
+        /// <param name="periodInSec">Candle period in seconds.</param>
         /// <param name="limit">Number of records in response (max. 10000).</param>
         /// <param name="sort">+1: sort in ascending order | -1: sort in descending order (by time).</param>
         /// <param name="start">If start is given, only records with time at least start (milliseconds) will be given as response.</param>
         /// <param name="end">If end is given, only records with time at least end (milliseconds) will be given as response.</param>
         /// <param name="section">Available values: "last", "hist".</param>
-        public async Task<IEnumerable<Candle>> GetCandles(string pair, int? limit = null, int? sort = null, long? start = null, long? end = null, string section = "hist")
+        public async Task<IEnumerable<Candle>> GetCandles(string pair, int periodInSec, int? limit = null, int? sort = null, long? start = null, long? end = null, string section = "hist")
         {
+            var key = BitfinexApi.GetAcceptedKey(pair, periodInSec);
+
             var request = "https://api-pub.bitfinex.com/v2/candles"
-                .AppendPathSegment("trade:1m:" + pair)
+                .AppendPathSegment(key)
                 .AppendPathSegment(section)
                 .WithHeader("accept", "application/json");
             SetSelectionQueryParams(request, limit, sort, start, end);
@@ -60,6 +62,9 @@ namespace HQExChecker.Clents
         /// <param name="end">If end is given, only records with time at least end (milliseconds) will be given as response.</param>
         public async Task<IEnumerable<Trade>> GetTrades(string pair, int? limit = null, int? sort = null, long? start = null, long? end = null)
         {
+            if (limit > 10000)
+                limit = 10000;
+
             var request = "https://api-pub.bitfinex.com/v2/trades"
                 .AppendPathSegment(pair)
                 .AppendPathSegment("hist")
