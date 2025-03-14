@@ -7,9 +7,9 @@ namespace HQExChecker.Connectors
 {
     public class BitfinexConnector : ITestConnector, IDisposable
     {
-        private readonly BitfinexRestClient _restClient;
+        private IBitfinexRestClient _restClient;
 
-        private readonly BitfinexWebsocketClient _websocketClient;
+        private IBitfinexWebsocketClient _websocketClient;
 
         /// <summary>
         /// Keys - channel ids
@@ -47,7 +47,7 @@ namespace HQExChecker.Connectors
 
         private CancellationTokenSource? resubscribeAsyncCancellationTokenSource;
 
-        public BitfinexConnector()
+        public BitfinexConnector(IBitfinexRestClient bitfinexRestClient, IBitfinexWebsocketClient bitfinexWebsocketClient)
         {
             _tradeChannelsSubRequests = [];
             _candleChannelsSubRequests = [];
@@ -57,14 +57,12 @@ namespace HQExChecker.Connectors
 
             resubscribingTask = new Task(ResubscribingTaskActionAsync);
 
-            _restClient = new BitfinexRestClient();
-            _websocketClient = new BitfinexWebsocketClient()
-            {
-                GetActiveChannelsConnetcions = () => _activeChannels.AsReadOnly()
-            };
+            _restClient = bitfinexRestClient;
+            _websocketClient = bitfinexWebsocketClient;
+            _websocketClient.GetActiveChannelsConnetcions = () => _activeChannels.AsReadOnly();
             _websocketClient.NewTradeAction += OnNewTrade;
             _websocketClient.CandleProcessingAction += OnNewCandle;
-            _websocketClient.ConnectionClosed += OnWebsocketConnect;
+            _websocketClient.Connected += OnWebsocketConnect;
             _websocketClient.HandleUnsubscribedChannel += OnChannelUnsubscribed;
             _websocketClient.HandleSubscribedTradeChannel += OnTradeChannelSubscribed;
             _websocketClient.HandleSubscribedCandleChannel += OnCandleChannelSubscribed;

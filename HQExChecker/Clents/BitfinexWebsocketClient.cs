@@ -8,7 +8,7 @@ using Websocket.Client;
 
 namespace HQExChecker.Clents
 {
-    public class BitfinexWebsocketClient : IDisposable
+    public class BitfinexWebsocketClient : IBitfinexWebsocketClient, IDisposable
     {
         private bool disposed = false;
 
@@ -18,7 +18,7 @@ namespace HQExChecker.Clents
 
         public event Action<Candle>? CandleProcessingAction;
 
-        public event Action<int>? ConnectionClosed;
+        public event Action<int>? Connected;
 
         public event Action<int>? HandleUnsubscribedChannel;
 
@@ -26,7 +26,7 @@ namespace HQExChecker.Clents
 
         public event Action<string, int, int>? HandleSubscribedCandleChannel;
 
-        public required Func<IReadOnlyDictionary<int, PairChannelOptions>> GetActiveChannelsConnetcions { get; set; }
+        public Func<IReadOnlyDictionary<int, PairChannelOptions>>? GetActiveChannelsConnetcions { get; set; }
 
         public BitfinexWebsocketClient()
         {
@@ -55,20 +55,7 @@ namespace HQExChecker.Clents
             SendUnsubscribeRequest(channelId);
         }
 
-        /// <param name="timeFrameInSeconds">Значение будет округлено вверх до ближайшего из доступных в api:
-        /// <br />1m 
-        /// <br />5m 
-        /// <br />15m 
-        /// <br />30m 
-        /// <br />1h 
-        /// <br />3h 
-        /// <br />6h 
-        /// <br />12h 
-        /// <br />1D 
-        /// <br />1W 
-        /// <br />14D 
-        /// <br />1M 
-        /// </param>
+        /// <param name="timeFrameInSeconds">Значение будет округлено вверх до ближайшего из доступных в api </param>
         public void SubscribeCandles(string symbol, int timeFrameInSeconds)
         {
             var key = BitfinexApi.GetAcceptedKey(symbol, timeFrameInSeconds);
@@ -115,7 +102,7 @@ namespace HQExChecker.Clents
 
         private void OnReconnection(ReconnectionInfo info)
         {
-            ConnectionClosed?.Invoke(BitfinexApi._maxPublicChannalConnectionsPerTime);
+            Connected?.Invoke(BitfinexApi._maxPublicChannalConnectionsPerTime);
         }
 
         private void HandleMessage(ResponseMessage message)

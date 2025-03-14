@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace HQExChecker.Clents
 {
-    public class BitfinexRestClient
+    public class BitfinexRestClient : IBitfinexRestClient
     {
         private void SetSelectionQueryParams(IFlurlRequest request, int? limit = null, int? sort = null, long? start = null, long? end = null)
         {

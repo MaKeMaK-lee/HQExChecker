@@ -1,6 +1,9 @@
 ﻿
+using HQExChecker.Clents;
+using HQExChecker.Connectors;
 using HQExChecker.GUI.Core;
 using HQExChecker.GUI.MVVM_Main_Components.ViewModel;
+using HQTestLib.Connectors;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 
@@ -16,6 +19,10 @@ namespace HQExChecker
         public App()
         {
             IServiceCollection services = new ServiceCollection();
+
+            services.AddSingleton<IBitfinexRestClient, BitfinexRestClient>();
+            services.AddSingleton<IBitfinexWebsocketClient, BitfinexWebsocketClient>();
+            services.AddSingleton<ITestConnector, BitfinexConnector>();
 
             services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainViewModel>()));
             services.AddSingleton<MainViewModel>();
