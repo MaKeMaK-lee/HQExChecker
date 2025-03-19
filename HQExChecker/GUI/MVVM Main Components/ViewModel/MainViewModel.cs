@@ -16,9 +16,11 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
         }
         public bool IsCheckedNavigateToTradesRadio => Navigation?.CurrentView?.GetType() == typeof(TradesViewModel);
         public bool IsCheckedNavigateToCandlesRadio => Navigation?.CurrentView?.GetType() == typeof(CandlesViewModel);
+        public bool IsCheckedNavigateToWalletRadio => Navigation?.CurrentView?.GetType() == typeof(WalletViewModel);
 
         public RelayCommand NavigateToTradesCommand { get; set; }
         public RelayCommand NavigateToCandlesCommand { get; set; }
+        public RelayCommand NavigateToWalletCommand { get; set; }
 
         public MainViewModel(INavigation navigationService)
         {
@@ -27,7 +29,6 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             Navigation.AddNavigationChangedHandler((o, e) =>
             {
                 OnPropertyChanged(nameof(IsCheckedNavigateToTradesRadio));
-
             });
 
             NavigateToTradesCommand = new RelayCommand(o =>
@@ -37,6 +38,10 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             NavigateToCandlesCommand = new RelayCommand(o =>
             {
                 Navigation.NavigateTo<CandlesViewModel>();
+            }, o => true);
+            NavigateToWalletCommand = new RelayCommand(o =>
+            {
+                Navigation.NavigateTo<WalletViewModel>();
             }, o => true);
 
             Navigation.NavigateTo<TradesViewModel>();

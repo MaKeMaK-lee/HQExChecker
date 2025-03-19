@@ -16,7 +16,7 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
         <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal">
+            <WrapPanel Orientation="Horizontal">
                 <Button Margin="5" Style="{StaticResource ButtonWithTextTheme}" 
                         Command="{Binding GetNewTradesCommand}" 
                         IsEnabled="{Binding IsEnabledButton_GetNewTrades}">
@@ -36,8 +36,8 @@
                         <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Unsubscribe trades"></TextBlock>
                     </Button.Content>
                 </Button>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Margin="5">
                     <TextBlock Text="Pair" Style="{StaticResource TextBlockTextTheme}"/>
                     <TextBox Width="100" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
@@ -50,7 +50,7 @@
                          Text="{Binding NewTradesMaxCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
                     </TextBox>
                 </StackPanel>
-            </StackPanel>
+            </WrapPanel>
         </StackPanel>
         <DataGrid Grid.Row="1" ItemsSource="{Binding Trades}" SelectionMode="Extended"
                     IsReadOnly="False"

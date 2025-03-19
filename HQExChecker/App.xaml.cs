@@ -1,9 +1,8 @@
-﻿
-using HQExChecker.Clents;
+﻿using HQExChecker.Clents;
 using HQExChecker.Connectors;
 using HQExChecker.GUI.Core;
 using HQExChecker.GUI.MVVM_Main_Components.ViewModel;
-using HQTestLib.Connectors;
+using HQExChecker.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
 
@@ -22,15 +21,20 @@ namespace HQExChecker
 
             services.AddSingleton<IBitfinexRestClient, BitfinexRestClient>();
             services.AddSingleton<IBitfinexWebsocketClient, BitfinexWebsocketClient>();
-            services.AddSingleton<ITestConnector, BitfinexConnector>();
+            services.AddSingleton<IBitfinexConnector, BitfinexConnector>();
+
+            services.AddSingleton<ICurrencyConverter, CurrencyConverter>();
 
             services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainViewModel>()));
             services.AddSingleton<MainViewModel>();
             services.AddSingleton<TradesViewModel>(provider => new TradesViewModel(
-                provider.GetRequiredService<ITestConnector>(),
+                provider.GetRequiredService<IBitfinexConnector>(),
                 Dispatcher));
             services.AddSingleton<CandlesViewModel>(provider => new CandlesViewModel(
-                provider.GetRequiredService<ITestConnector>(),
+                provider.GetRequiredService<IBitfinexConnector>(),
+                Dispatcher));
+            services.AddSingleton<WalletViewModel>(provider => new WalletViewModel(
+                provider.GetRequiredService<ICurrencyConverter>(),
                 Dispatcher));
 
             services.AddSingleton<Func<Type, ViewModel>>

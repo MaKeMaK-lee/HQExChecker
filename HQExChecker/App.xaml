@@ -15,6 +15,9 @@
             <DataTemplate DataType="{x:Type viewModel:CandlesViewModel}">
                 <view:CandlesView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:WalletViewModel}">
+                <view:WalletView/>
+            </DataTemplate>
 
 
 

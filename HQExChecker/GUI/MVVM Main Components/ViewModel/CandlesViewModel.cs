@@ -1,5 +1,5 @@
 ﻿using HQExChecker.GUI.Core;
-using HQExChecker.GUI.EntityExtensions;
+using HQExChecker.GUI.Extensions;
 using HQTestLib.Connectors;
 using HQTestLib.Entities;
 using System.Collections.ObjectModel;
@@ -15,18 +15,6 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
         ObservableCollection<Candle> candles;
         public IEnumerable<Candle> Candles => candles;
 
-        private void AddOrReplaceCandle(Candle candle)
-        {
-            var existsCandle = candles.FirstOrDefault(c => c.OpenTime == candle.OpenTime);
-            if (existsCandle != null)
-            {
-                if (existsCandle.EqualProps(candle))
-                    return;
-                candles.Remove(existsCandle);
-            }
-            candles.Add(candle);
-        }
-
         public bool IsEnabledButton_GetNewCandles => !IsGetNewCandlesActive;
 
         private bool isGetNewCandlesActive;
@@ -41,7 +29,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public string pair;
+        private string pair;
         public string Pair
         {
             get => pair;
@@ -52,7 +40,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public int candlePeriod;
+        private int candlePeriod;
         public int CandlePeriod
         {
             get => candlePeriod;
@@ -63,7 +51,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public DateTimeOffset candleFrom;
+        private DateTimeOffset candleFrom;
         public DateTimeOffset CandleFrom
         {
             get => candleFrom;
@@ -74,7 +62,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public DateTimeOffset? candleTo;
+        private DateTimeOffset? candleTo;
         public DateTimeOffset? CandleTo
         {
             get
@@ -90,7 +78,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public int сandlesMaxCount;
+        private int сandlesMaxCount;
         public int СandlesMaxCount
         {
             get => сandlesMaxCount;
@@ -109,7 +97,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
         {
             GetCandlesCommand = new RelayCommand(o =>
             {
-                GetNewCandles();
+                Task.Run(GetNewCandlesAsync);
             }, o => true);
             SubscribeCandlesCommand = new RelayCommand(o =>
             {
@@ -153,21 +141,21 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
 
         private void CandleProcessingAction(Candle candle)
         {
-            _currentDispatcher.Invoke(() => AddOrReplaceCandle(candle));
+            _currentDispatcher.Invoke(() => candles.AddOrReplace(candle, t => t.OpenTime == candle.OpenTime));
         }
 
-        private async void GetNewCandles()
+        private async Task GetNewCandlesAsync()
         {
             IsGetNewCandlesActive = true;
 
             var getRequestTask = _connector.GetCandleSeriesAsync(Pair, CandlePeriod, CandleFrom, CandleTo, СandlesMaxCount);
 
             var firstTask = await Task.WhenAny(getRequestTask, Task.Delay(TimeSpan.FromSeconds(5)));
-            if (firstTask == getRequestTask)
+            if (firstTask == getRequestTask && firstTask.IsFaulted == false)
             {
                 foreach (var item in getRequestTask.Result)
                 {
-                    AddOrReplaceCandle(item);
+                    _currentDispatcher.Invoke(() => candles.AddOrReplace(item, t => t.OpenTime == item.OpenTime));
                 }
             }
 

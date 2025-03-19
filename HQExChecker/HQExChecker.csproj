@@ -9,7 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="GUI\MVVM Main Components\Model\" />
+    <Compile Remove="GUI\MVVM Main Components\Model\**" />
+    <EmbeddedResource Remove="GUI\MVVM Main Components\Model\**" />
+    <None Remove="GUI\MVVM Main Components\Model\**" />
+    <Page Remove="GUI\MVVM Main Components\Model\**" />
   </ItemGroup>
 
   <ItemGroup>

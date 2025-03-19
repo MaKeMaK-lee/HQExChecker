@@ -94,6 +94,13 @@
              Style="{StaticResource MenuButtonTheme}"
              IsChecked="{Binding IsCheckedNavigateToCandlesRadio, Mode=OneWay}"
              Command="{Binding NavigateToCandlesCommand}"/>
+            <RadioButton Content="Wallet"
+             Height="50" HorizontalAlignment="Stretch"
+             Foreground="WhiteSmoke"
+             FontSize="14"
+             Style="{StaticResource MenuButtonTheme}"
+             IsChecked="{Binding IsCheckedNavigateToWalletRadio, Mode=OneWay}"
+             Command="{Binding NavigateToWalletCommand}"/>
         </StackPanel>
 
         <ContentControl Grid.Row="1"

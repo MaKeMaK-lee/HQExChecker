@@ -40,6 +40,9 @@ namespace HQExChecker.Clents
 
         public static int _getTradesMaxLimit = 10000;
         //Дополнено/Отредактировано:
+        public const string _pairTemplateString = "t{left}{right}";
+        public const string _pairTemplateLeftPropertyString = "{left}";
+        public const string _pairTemplateRightPropertyString = "{right}";
         public const string _candlesSubscriptionKeyTemplateString = "trade:{timeframe}:{symbol}";
         public static string _candlesSubscriptionKeyTemplateTimeframePropertyString = "{timeframe}";
         public static string _candlesSubscriptionKeyTemplateSymbolPropertyString = "{symbol}";
@@ -47,6 +50,11 @@ namespace HQExChecker.Clents
         public static readonly List<int> _candlesSubscriptionKeyTimeframeAcceptedValuesSeconds = [60, 300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 604800, 1209600, 2592000];
 
         #endregion
+
+        public static string GetPair(string leftCurrency, string rightCurrency)
+            => _pairTemplateString
+                .Replace(_pairTemplateLeftPropertyString, leftCurrency)
+                .Replace(_pairTemplateRightPropertyString, rightCurrency);
 
         public static string GetChannelSymbol(string key) => ExtractSymbol(key,
             _candlesSubscriptionKeyTemplateString,

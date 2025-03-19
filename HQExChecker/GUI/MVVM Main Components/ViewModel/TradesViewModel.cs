@@ -1,5 +1,5 @@
 ﻿using HQExChecker.GUI.Core;
-using HQExChecker.GUI.EntityExtensions;
+using HQExChecker.GUI.Extensions;
 using HQTestLib.Connectors;
 using HQTestLib.Entities;
 using System.Collections.ObjectModel;
@@ -15,18 +15,6 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
         ObservableCollection<Trade> trades;
         public IEnumerable<Trade> Trades => trades;
 
-        private void AddOrReplaceTrade(Trade trade)
-        {
-            var existsTrade = trades.FirstOrDefault(t => t.Id == trade.Id);
-            if (existsTrade != null)
-            {
-                if (existsTrade.EqualProps(trade))
-                    return;
-                trades.Remove(existsTrade);
-            }
-            trades.Add(trade);
-        }
-
         public bool IsEnabledButton_GetNewTrades => !IsGetNewTradesActive;
 
         private bool isGetNewTradesActive;
@@ -41,7 +29,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public string pair;
+        private string pair;
         public string Pair
         {
             get => pair;
@@ -52,7 +40,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
             }
         }
 
-        public int newTradesMaxCount;
+        private int newTradesMaxCount;
         public int NewTradesMaxCount
         {
             get => newTradesMaxCount;
@@ -71,7 +59,7 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
         {
             GetNewTradesCommand = new RelayCommand(o =>
             {
-                GetNewTrades();
+                Task.Run(GetNewTradesAsync);
             }, o => true);
             SubscribeTradesCommand = new RelayCommand(o =>
             {
@@ -111,21 +99,21 @@ namespace HQExChecker.GUI.MVVM_Main_Components.ViewModel
 
         private void NewTradeAction(Trade trade)
         {
-            _currentDispatcher.Invoke(() => AddOrReplaceTrade(trade));
+            _currentDispatcher.Invoke(() => trades.AddOrReplace(trade, t => t.Id == trade.Id));
         }
 
-        private async void GetNewTrades()
+        private async Task GetNewTradesAsync()
         {
             IsGetNewTradesActive = true;
 
             var getRequestTask = _connector.GetNewTradesAsync(Pair, NewTradesMaxCount);
 
             var firstTask = await Task.WhenAny(getRequestTask, Task.Delay(TimeSpan.FromSeconds(5)));
-            if (firstTask == getRequestTask)
+            if (firstTask == getRequestTask && firstTask.IsFaulted == false)
             {
                 foreach (var item in getRequestTask.Result)
                 {
-                    AddOrReplaceTrade(item);
+                    _currentDispatcher.Invoke(() => trades.AddOrReplace(item, t => t.Id == item.Id));
                 }
             }
 

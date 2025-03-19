@@ -74,5 +74,27 @@ namespace HQExChecker.Clents
 
             return entitiy;
         }
+
+        /// <summary>
+        /// The ticker endpoint provides a high level overview of the state of the market for a specified pair.
+        /// It shows the current best bid and ask, the last traded price, as well as information on the daily volume and price movement over the last day.
+        /// Rate Limit:	90 reqs/min
+        /// </summary>
+        /// <param name="numCurrency">Pair left currency</param>
+        /// <param name="denomCurrency">Pair right currency</param>
+        /// <returns></returns>
+        public async Task<Ticker> GetTicker(string leftCurrency, string rightCurrency)
+        {
+            var pair = BitfinexApi.GetPair(leftCurrency, rightCurrency);
+
+            var request = BitfinexApi._getTickerUrl
+                .AppendPathSegment(pair)
+                .WithHeader(BitfinexApi._getAcceptJsonHeaderNameString, BitfinexApi._getAcceptJsonHeaderValueString);
+
+            var jsonRootElement = await request.GetJsonAsync<JsonElement>();
+            var entitiy = jsonRootElement.CreateTicker();
+
+            return entitiy;
+        }
     }
 }

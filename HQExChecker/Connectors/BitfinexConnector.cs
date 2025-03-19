@@ -1,11 +1,11 @@
 ﻿using HQExChecker.Clents;
+using HQExChecker.Entities;
 using HQExChecker.Entities.WebsocketChannels;
-using HQTestLib.Connectors;
 using HQTestLib.Entities;
 
 namespace HQExChecker.Connectors
 {
-    public class BitfinexConnector : ITestConnector, IDisposable
+    public class BitfinexConnector : IBitfinexConnector
     {
         private IBitfinexRestClient _restClient;
 
@@ -196,6 +196,13 @@ namespace HQExChecker.Connectors
                 }
             }
         }
+
+        #region IBitfinexConnector REST
+
+        public async Task<Ticker> GetTicker(string numCurrency, string denomCurrency)
+            => await _restClient.GetTicker(numCurrency, denomCurrency);
+
+        #endregion
 
         #region ITestConnector REST
 

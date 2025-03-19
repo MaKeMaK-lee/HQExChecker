@@ -45,5 +45,7 @@ namespace HQExChecker.Clents
 
         public Task<Ticker> GetTicker(string pair);
 
+        public Task<Ticker> GetTicker(string numCurrency, string denomCurrency);
+
     }
 }
