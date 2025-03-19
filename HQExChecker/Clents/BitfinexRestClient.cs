@@ -11,7 +11,7 @@ namespace HQExChecker.Clents
     {
         private void SetSelectionQueryParams(IFlurlRequest request, int? limit = null, int? sort = null, long? start = null, long? end = null)
         {
-            if (limit != null)
+            if (limit != null && limit > 0)
                 request = request.SetQueryParam("limit", limit);
             if (sort != null)
                 request = request.SetQueryParam("sort", sort);
@@ -33,8 +33,9 @@ namespace HQExChecker.Clents
         /// <param name="start">If start is given, only records with time at least start (milliseconds) will be given as response.</param>
         /// <param name="end">If end is given, only records with time at least end (milliseconds) will be given as response.</param>
         /// <param name="section">Available values: "last", "hist".</param>
-        public async Task<IEnumerable<Candle>> GetCandles(string pair, int periodInSec, int? limit = null, int? sort = null, long? start = null, long? end = null, string section = "hist")
+        public async Task<IEnumerable<Candle>> GetCandles(string pair, int periodInSec, int? limit = null, int? sort = null, long? start = null, long? end = null, string? section = null)
         {
+            section ??= "hist";
             var key = BitfinexApi.GetAcceptedKey(pair, periodInSec);
 
             var request = "https://api-pub.bitfinex.com/v2/candles"

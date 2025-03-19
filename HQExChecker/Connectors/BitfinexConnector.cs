@@ -97,10 +97,25 @@ namespace HQExChecker.Connectors
 
         private void OnNewTrade(Trade newTrade)
         {
+            var channel = _activeChannels.Values
+                .Where(ch => ch.Pair == newTrade.Pair)
+                .Select(ch => ch as TradeChannelOptions)
+                .FirstOrDefault(ch => ch != null);
+
+            if (channel == null)
+                return;
+            if (channel.MaxCount > 0 && channel.CurrentCount >= channel.MaxCount)
+            {
+                UnsubscribeTrades(channel.Pair);
+                return;
+            }
+
             if (newTrade.Side == "buy")
                 NewBuyTrade?.Invoke(newTrade);
             if (newTrade.Side == "sell")
                 NewSellTrade?.Invoke(newTrade);
+
+            channel!.CurrentCount++;
         }
 
         private void OnNewCandle(Candle candle)
@@ -109,8 +124,22 @@ namespace HQExChecker.Connectors
                 .Where(ch => ch.Pair == candle.Pair)
                 .Select(ch => ch as CandleChannelOptions)
                 .FirstOrDefault(ch => ch != null);
-            if (channel != null && channel.From <= candle.OpenTime.AddSeconds((double)channel.AcceptedPeriodInSec!) && candle.OpenTime <= channel.To)
-                CandleSeriesProcessing?.Invoke(candle);
+
+            if (channel == null)
+                return;
+            if (channel.MaxCount > 0 && channel.CurrentCount >= channel.MaxCount)
+                return;
+            if (channel.From != null && !(channel.From <= candle.OpenTime.AddSeconds((double)channel.AcceptedPeriodInSec!)))
+                return;
+            if (channel.To != null && !(candle.OpenTime <= channel.To))
+                return;
+
+            CandleSeriesProcessing?.Invoke(candle);
+
+            if (channel.CurrentProcessedFromDateTimes.Contains(candle.OpenTime))
+                return;
+            channel.CurrentProcessedFromDateTimes.Add(candle.OpenTime);
+            channel!.CurrentCount++;
         }
 
         private void OnWebsocketConnect(int maxConnectionsPerMinute = int.MaxValue)
@@ -193,7 +222,7 @@ namespace HQExChecker.Connectors
 
         public void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0)
         {
-            var request = new CandleChannelOptions() { Pair = pair, PeriodInSec = periodInSec, From = from, To = to, Count = count };
+            var request = new CandleChannelOptions() { Pair = pair, PeriodInSec = periodInSec, From = from, To = to, MaxCount = count };
             _candleChannelsSubRequests[pair] = request;
             _websocketClient.SubscribeCandles(pair, periodInSec);
         }
@@ -246,7 +275,7 @@ namespace HQExChecker.Connectors
             if (disposed)
                 return;
 
-            _websocketClient.Dispose();
+            (_websocketClient as IDisposable)?.Dispose();
 
             GC.SuppressFinalize(this);
             disposed = true;

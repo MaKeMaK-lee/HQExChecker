@@ -87,6 +87,13 @@
              Style="{StaticResource MenuButtonTheme}"
              IsChecked="{Binding IsCheckedNavigateToTradesRadio, Mode=OneWay}"
              Command="{Binding NavigateToTradesCommand}"/>
+            <RadioButton Content="Candles"
+             Height="50" HorizontalAlignment="Stretch"
+             Foreground="WhiteSmoke"
+             FontSize="14"
+             Style="{StaticResource MenuButtonTheme}"
+             IsChecked="{Binding IsCheckedNavigateToCandlesRadio, Mode=OneWay}"
+             Command="{Binding NavigateToCandlesCommand}"/>
         </StackPanel>
 
         <ContentControl Grid.Row="1"

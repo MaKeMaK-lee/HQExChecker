@@ -13,7 +13,7 @@ namespace HQExChecker.Clents
             int? sort = null,
             long? start = null,
             long? end = null,
-            string section = null!);
+            string? section = null);
 
         public Task<IEnumerable<Trade>> GetTrades(
             string pair,

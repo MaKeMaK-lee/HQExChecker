@@ -3,11 +3,11 @@
 namespace HQExChecker.GUI.MVVM_Main_Components.View
 {
     /// <summary>
-    /// Логика взаимодействия для TradesView.xaml
+    /// Логика взаимодействия для CandlesView.xaml
     /// </summary>
-    public partial class TradesView : UserControl
+    public partial class CandlesView : UserControl
     {
-        public TradesView()
+        public CandlesView()
         {
             InitializeComponent();
         }

@@ -141,8 +141,8 @@ namespace HQExChecker.Clents
                             var snapshotArray = array[1]
                                 .EnumerateArray()
                                 .Select(t => t.CreatePairTrade(tradesChannel.Pair))
-                                .Take(tradesChannel.MaxCount)
                                 .OrderBy(t => t.Time);
+
                             foreach (var item in snapshotArray)
                             {
                                 NewTradeAction?.Invoke(item);
@@ -161,17 +161,13 @@ namespace HQExChecker.Clents
                             {
                                 CandleProcessingAction?.Invoke(array[1].CreatePairCandle(candlesChannel.Pair));
                             }
-                            //Если это снапшот 
+                            //Если это снапшот
                             if (array[1][0].ValueKind == JsonValueKind.Array)
                             {
                                 var snapshotArray = array[1]
                                     .EnumerateArray()
-                                    .Select(t => t.CreatePairCandle(candlesChannel.Pair));
-
-                                int maxCount = (int)(candlesChannel.Count ?? 0);
-                                if (maxCount > 0)
-                                    snapshotArray = snapshotArray.Take(maxCount);
-                                snapshotArray = snapshotArray.OrderBy(t => t.OpenTime);
+                                    .Select(t => t.CreatePairCandle(candlesChannel.Pair))
+                                    .OrderBy(t => t.OpenTime);
 
                                 foreach (var item in snapshotArray)
                                 {

@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="HQExChecker.GUI.MVVM_Main_Components.View.TradesView"
+﻿<UserControl x:Class="HQExChecker.GUI.MVVM_Main_Components.View.CandlesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -16,28 +16,28 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
         <StackPanel Orientation="Vertical">
-            <StackPanel Orientation="Horizontal">
+            <WrapPanel Orientation="Horizontal">
                 <Button Margin="5" Style="{StaticResource ButtonWithTextTheme}" 
-                        Command="{Binding GetNewTradesCommand}" 
-                        IsEnabled="{Binding IsEnabledButton_GetNewTrades}">
+                        Command="{Binding GetCandlesCommand}" 
+                        IsEnabled="{Binding IsEnabledButton_GetNewCandles}">
                     <Button.Content>
-                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Get trades"></TextBlock>
+                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Get candles"></TextBlock>
                     </Button.Content>
                 </Button>
                 <Button Margin="5" Style="{StaticResource ButtonWithTextTheme}" 
-                        Command="{Binding SubscribeTradesCommand}" >
+                        Command="{Binding SubscribeCandlesCommand}" >
                     <Button.Content>
-                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Subscribe trades"></TextBlock>
+                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Subscribe candles"></TextBlock>
                     </Button.Content>
                 </Button>
                 <Button Margin="5" Style="{StaticResource ButtonWithTextTheme}" 
-                        Command="{Binding UnsubscribeTradesCommand}" >
+                        Command="{Binding UnsubscribeCandlesCommand}" >
                     <Button.Content>
-                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Unsubscribe trades"></TextBlock>
+                        <TextBlock Margin="3,0,3,0" Foreground="#80FFFFFF" Text="Unsubscribe candles"></TextBlock>
                     </Button.Content>
                 </Button>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Margin="5">
                     <TextBlock Text="Pair" Style="{StaticResource TextBlockTextTheme}"/>
                     <TextBox Width="100" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
@@ -45,14 +45,32 @@
                     </TextBox>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="5">
-                    <TextBlock Text="Max count" Style="{StaticResource TextBlockTextTheme}"/>
+                    <TextBlock Text="Candle time period (sec)" Style="{StaticResource TextBlockTextTheme}"/>
                     <TextBox Width="100" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
-                         Text="{Binding NewTradesMaxCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                         Text="{Binding CandlePeriod, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
                     </TextBox>
                 </StackPanel>
-            </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <TextBlock Text="From" Style="{StaticResource TextBlockTextTheme}"/>
+                    <TextBox Width="160" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
+                         Text="{Binding CandleFrom, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                    </TextBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <TextBlock Text="To" Style="{StaticResource TextBlockTextTheme}"/>
+                    <TextBox Width="160" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
+                         Text="{Binding CandleTo, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                    </TextBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="5">
+                    <TextBlock Text="Max count" Style="{StaticResource TextBlockTextTheme}"/>
+                    <TextBox Width="100" Margin="0,3,8,3" Style="{StaticResource TextBoxTextTheme}" 
+                         Text="{Binding СandlesMaxCount, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                    </TextBox>
+                </StackPanel>
+            </WrapPanel>
         </StackPanel>
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Trades}" SelectionMode="Extended"
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Candles}" SelectionMode="Extended"
                     IsReadOnly="False"
                     CanUserAddRows="False"
                     CanUserDeleteRows="True"

@@ -12,6 +12,90 @@
             <DataTemplate DataType="{x:Type viewModel:TradesViewModel}">
                 <view:TradesView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:CandlesViewModel}">
+                <view:CandlesView/>
+            </DataTemplate>
+
+
+
+            <Style TargetType="{x:Type TextBlock}" x:Key="TextBlockTextTheme">
+                <Setter Property="Height" Value="25"/>
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="HorizontalAlignment" Value="Right"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="#80FFFFFF"/>
+            </Style>
+
+            <Style TargetType="{x:Type TextBox}" x:Key="TextBoxTextTheme">
+                <Setter Property="Height" Value="25"/>
+                <Setter Property="Padding" Value="5,0,0,0"/>
+                <Setter Property="Background" Value="#10FFFFFF"/>
+                <Setter Property="Foreground" Value="#80FFFFFF"/>
+                <Setter Property="BorderBrush" Value="#20FFFFFF"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+
+            <Style TargetType="{x:Type Button}" x:Key="ButtonWithTextTheme" >
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Button Height="25"
+                             Background="#10FFFFFF"
+                             BorderBrush="#20FFFFFF"
+                             BorderThickness="1"
+                             Foreground="#80FFFFFF"
+                             Content="{TemplateBinding Property=Content}"  
+                             Command="{TemplateBinding Property=Command}"></Button>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                <Setter Property="Margin" Value="3" />
+            </Style>
+            <Style TargetType="{x:Type DataGrid}">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="RowBackground" Value="#25000000"/>
+                <Setter Property="AlternatingRowBackground" Value="#40000000"/>
+                <Setter Property="Foreground" Value="#80FFFFFF"/>
+            </Style>
+            <Style TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="Padding" Value="5"/>
+                <Setter Property="Background" Value="#40000000"/>
+            </Style>
+            <Style TargetType="{x:Type DataGridRowHeader}">
+                <Setter Property="Background" Value="#40000000"/>
+            </Style>
+
+            <Style TargetType="{x:Type Button}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border CornerRadius="1" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                                <Grid>
+                                    <Rectangle x:Name="background" Fill="{TemplateBinding Background}"/>
+                                    <Rectangle x:Name="mouseOverMask" Fill="White" Opacity="0"/>
+                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Effect" >
+                                        <Setter.Value>
+                                            <BlurEffect Radius="3"></BlurEffect>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="mouseOverMask" Property="Opacity" Value="0.2"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

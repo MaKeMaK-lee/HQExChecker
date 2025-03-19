@@ -26,7 +26,12 @@ namespace HQExChecker
 
             services.AddSingleton<MainWindow>(provider => new MainWindow(provider.GetRequiredService<MainViewModel>()));
             services.AddSingleton<MainViewModel>();
-            services.AddSingleton<TradesViewModel>();
+            services.AddSingleton<TradesViewModel>(provider => new TradesViewModel(
+                provider.GetRequiredService<ITestConnector>(),
+                Dispatcher));
+            services.AddSingleton<CandlesViewModel>(provider => new CandlesViewModel(
+                provider.GetRequiredService<ITestConnector>(),
+                Dispatcher));
 
             services.AddSingleton<Func<Type, ViewModel>>
                 (serviceProvider => viewModelType => (ViewModel)serviceProvider.GetRequiredService(viewModelType));

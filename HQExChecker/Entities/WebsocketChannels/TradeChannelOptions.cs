@@ -3,5 +3,6 @@
     public class TradeChannelOptions : PairChannelOptions
     {
         public required int MaxCount { get; set; }
+        public int CurrentCount { get; set; } = 0;
     }
 }
