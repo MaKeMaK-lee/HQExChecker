@@ -10,6 +10,9 @@ namespace HQExChecker.Clents
         public static int _maxPublicChannalConnectionsPerMinute = 20;
         public static int _maxPublicChannalConnectionsPerTime = 25;
         public static string _publicWssConnectionUrl = "wss://api-pub.bitfinex.com/ws/2";
+        public static string _getTickerUrl = "https://api-pub.bitfinex.com/v2/ticker";
+        public static string _getTradesUrl = "https://api-pub.bitfinex.com/v2/trades";
+        public static string _getCandelsUrl = "https://api-pub.bitfinex.com/v2/candles";
 
         public static string _subscribeEventName = "subscribe";
         public static string _unsubscribeEventName = "unsubscribe";
@@ -19,6 +22,13 @@ namespace HQExChecker.Clents
         public static string _tradesChannelName = "trades";
         public static string _candlesChannelName = "candles";
 
+        public static string _getAcceptJsonHeaderNameString = "accept";
+        public static string _getAcceptJsonHeaderValueString = "application/json";
+        public static string _getSortPropertyNameString = "sort";
+        public static string _getStartPropertyNameString = "start";
+        public static string _getEndPropertyNameString = "end";
+        public static string _getLimitPropertyNameString = "limit";
+        public static string _getHistPropertyNameString = "hist";
         public static string _eventPropertyNameString = "event";
         public static string _channelPropertyNameString = "channel";
         public static string _channelIdPropertyNameString = "chanId";
@@ -28,6 +38,7 @@ namespace HQExChecker.Clents
         public static string _tradeMessageTypeUpdateString = "tu";
         public static string _tradeMessageTypeExecutedString = "te";
 
+        public static int _getTradesMaxLimit = 10000;
         //Дополнено/Отредактировано:
         public const string _candlesSubscriptionKeyTemplateString = "trade:{timeframe}:{symbol}";
         public static string _candlesSubscriptionKeyTemplateTimeframePropertyString = "{timeframe}";
