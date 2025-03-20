@@ -200,17 +200,17 @@ namespace HQExChecker.Connectors
         #region IBitfinexConnector REST
 
         public async Task<Ticker> GetTicker(string numCurrency, string denomCurrency)
-            => await _restClient.GetTicker(numCurrency, denomCurrency);
+            => await _restClient.GetTickerAsync(numCurrency, denomCurrency);
 
         #endregion
 
         #region ITestConnector REST
 
         public async Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount)
-            => await _restClient.GetTrades(pair, maxCount);
+            => await _restClient.GetTradesAsync(pair, maxCount);
 
         public async Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInSec, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 0)
-            => await _restClient.GetCandles(pair, periodInSec, limit: (int?)count, start: from?.ToUnixTimeMilliseconds(), end: to?.ToUnixTimeMilliseconds());
+            => await _restClient.GetCandlesAsync(pair, periodInSec, limit: (int?)count, start: from?.ToUnixTimeMilliseconds(), end: to?.ToUnixTimeMilliseconds());
 
         #endregion
 
@@ -222,42 +222,58 @@ namespace HQExChecker.Connectors
 
         public void SubscribeTrades(string pair, int maxCount = 100)
         {
-            var request = new TradeChannelOptions() { Pair = pair, MaxCount = maxCount };
-            _tradeChannelsSubRequests[pair] = request;
-            _websocketClient.SubscribeTrades(pair);
+            try
+            {
+                var request = new TradeChannelOptions() { Pair = pair, MaxCount = maxCount };
+                _tradeChannelsSubRequests[pair] = request;
+                _websocketClient.SubscribeTrades(pair);
+            }
+            catch (Exception) { }
         }
 
         public void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0)
         {
-            var request = new CandleChannelOptions() { Pair = pair, PeriodInSec = periodInSec, From = from, To = to, MaxCount = count };
-            _candleChannelsSubRequests[pair] = request;
-            _websocketClient.SubscribeCandles(pair, periodInSec);
+            try
+            {
+                var request = new CandleChannelOptions() { Pair = pair, PeriodInSec = periodInSec, From = from, To = to, MaxCount = count };
+                _candleChannelsSubRequests[pair] = request;
+                _websocketClient.SubscribeCandles(pair, periodInSec);
+            }
+            catch (Exception) { }
         }
 
         public void UnsubscribeTrades(string pair)
         {
-            _tradeChannelsSubRequests.Remove(pair);
+            try
+            {
+                _tradeChannelsSubRequests.Remove(pair);
 
-            var channel = _activeChannels.FirstOrDefault(ch => (ch.Value as TradeChannelOptions)?.Pair == pair);
-            //Если канал не найден
-            if (channel.Key == 0)
-                return;
+                var channel = _activeChannels.FirstOrDefault(ch => (ch.Value as TradeChannelOptions)?.Pair == pair);
+                //Если канал не найден
+                if (channel.Key == 0)
+                    return;
 
-            _tradeChannelsUnsubRequests.Add(pair);
-            _websocketClient.UnsubscribeTrades(channel.Key);
+                _tradeChannelsUnsubRequests.Add(pair);
+                _websocketClient.UnsubscribeTrades(channel.Key);
+            }
+            catch (Exception) { }
         }
 
         public void UnsubscribeCandles(string pair)
         {
-            _candleChannelsSubRequests.Remove(pair);
+            try
+            {
+                _candleChannelsSubRequests.Remove(pair);
 
-            var channel = _activeChannels.FirstOrDefault(ch => (ch.Value as CandleChannelOptions)?.Pair == pair);
-            //Если канал не найден
-            if (channel.Key == 0)
-                return;
+                var channel = _activeChannels.FirstOrDefault(ch => (ch.Value as CandleChannelOptions)?.Pair == pair);
+                //Если канал не найден
+                if (channel.Key == 0)
+                    return;
 
-            _candleChannelsUnsubRequests.Add(pair);
-            _websocketClient.UnsubscribeCandles(channel.Key);
+                _candleChannelsUnsubRequests.Add(pair);
+                _websocketClient.UnsubscribeCandles(channel.Key);
+            }
+            catch (Exception) { }
         }
 
         #endregion

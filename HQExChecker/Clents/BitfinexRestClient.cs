@@ -21,7 +21,7 @@ namespace HQExChecker.Clents
                 request = request.SetQueryParam(BitfinexApi._getEndPropertyNameString, end);
         }
 
-        public async Task<IEnumerable<Candle>> GetCandles(string pair, int periodInSec, int? limit = null, int? sort = null, long? start = null, long? end = null, string? section = null)
+        public async Task<IEnumerable<Candle>> GetCandlesAsync(string pair, int periodInSec, int? limit = null, int? sort = null, long? start = null, long? end = null, string? section = null)
         {
             section ??= BitfinexApi._getHistPropertyNameString;
             var key = BitfinexApi.GetAcceptedKey(pair, periodInSec);
@@ -39,7 +39,7 @@ namespace HQExChecker.Clents
             return entities;
         }
 
-        public async Task<IEnumerable<Trade>> GetTrades(string pair, int? limit = null, int? sort = null, long? start = null, long? end = null)
+        public async Task<IEnumerable<Trade>> GetTradesAsync(string pair, int? limit = null, int? sort = null, long? start = null, long? end = null)
         {
             if (limit > BitfinexApi._getTradesMaxLimit)
                 limit = BitfinexApi._getTradesMaxLimit;
@@ -63,7 +63,7 @@ namespace HQExChecker.Clents
         /// Rate Limit:	90 reqs/min
         /// </summary>
         /// <param name="pair">Trading pair</param>
-        public async Task<Ticker> GetTicker(string pair)
+        public async Task<Ticker> GetTickerAsync(string pair)
         {
             var request = BitfinexApi._getTickerUrl
                 .AppendPathSegment(pair)
@@ -83,7 +83,7 @@ namespace HQExChecker.Clents
         /// <param name="numCurrency">Pair left currency</param>
         /// <param name="denomCurrency">Pair right currency</param>
         /// <returns></returns>
-        public async Task<Ticker> GetTicker(string leftCurrency, string rightCurrency)
+        public async Task<Ticker> GetTickerAsync(string leftCurrency, string rightCurrency)
         {
             var pair = BitfinexApi.GetPair(leftCurrency, rightCurrency);
 

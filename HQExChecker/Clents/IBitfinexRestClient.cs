@@ -17,7 +17,7 @@ namespace HQExChecker.Clents
         /// <param name="start">If start is given, only records with time at least start (milliseconds) will be given as response.</param>
         /// <param name="end">If end is given, only records with time at least end (milliseconds) will be given as response.</param>
         /// <param name="section">Available values: "last", "hist".</param>
-        public Task<IEnumerable<Candle>> GetCandles(
+        public Task<IEnumerable<Candle>> GetCandlesAsync(
             string pair,
             int periodInSec,
             int? limit = null,
@@ -36,16 +36,16 @@ namespace HQExChecker.Clents
         /// <param name="sort">+1: sort in ascending order | -1: sort in descending order (by time).</param>
         /// <param name="start">If start is given, only records with time at least start (milliseconds) will be given as response.</param>
         /// <param name="end">If end is given, only records with time at least end (milliseconds) will be given as response.</param>
-        public Task<IEnumerable<Trade>> GetTrades(
+        public Task<IEnumerable<Trade>> GetTradesAsync(
             string pair,
             int? limit = null,
             int? sort = null,
             long? start = null,
             long? end = null);
 
-        public Task<Ticker> GetTicker(string pair);
+        public Task<Ticker> GetTickerAsync(string pair);
 
-        public Task<Ticker> GetTicker(string numCurrency, string denomCurrency);
+        public Task<Ticker> GetTickerAsync(string numCurrency, string denomCurrency);
 
     }
 }
